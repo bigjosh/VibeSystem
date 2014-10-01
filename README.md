@@ -14,8 +14,11 @@ http://www.ti.com/ww/en/launchpad/launchpads-msp430-msp-exp430g2.html#tabs
 http://processors.wiki.ti.com/index.php/MSP430_LaunchPad_Firmware_Update
 
 3) unplug the USB from the LaunchPad
+
 4) remove the programming jumpers from the LuanchPad
+
 5) disconnect the battery from the Vibe
+
 6) connect to the Vibe programming pins like this...
 
 LaunchPad|Vibe
