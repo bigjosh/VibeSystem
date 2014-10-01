@@ -28,7 +28,7 @@ VCC|+3V
 
 Conect to the USB side of these pins.
 
-Photo <a href="Programming%20Connections.jpg>here</a>.
+Photo <a href="Programming%20Connections.jpg">here</a>.
 
 
 
