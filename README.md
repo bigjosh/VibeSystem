@@ -7,11 +7,11 @@ To program the Vibe from a Windows machine...
 
 1. get a super-cheap MSP430 Launchpad...
 
-http://www.ti.com/ww/en/launchpad/launchpads-msp430-msp-exp430g2.html#tabs
+  http://www.ti.com/ww/en/launchpad/launchpads-msp430-msp-exp430g2.html#tabs
 
 2. then update the firmware...
 
-http://processors.wiki.ti.com/index.php/MSP430_LaunchPad_Firmware_Update
+  http://processors.wiki.ti.com/index.php/MSP430_LaunchPad_Firmware_Update
 
 3. unplug the USB from the LaunchPad
 
@@ -21,17 +21,17 @@ http://processors.wiki.ti.com/index.php/MSP430_LaunchPad_Firmware_Update
 
 6. connect to the Vibe programming pins like this...
 
-LaunchPad|Vibe
----------|----
-TEST|TCK
-RST|TDO
-RXD|_no connection_
-TXD|_no connection_
-VCC|+3V
+  LaunchPad|Vibe
+  ---------|----
+  TEST|TCK
+  RST|TDO
+  RXD|_no connection_
+  TXD|_no connection_
+  VCC|+3V
 
-Conect to the USB side of these pins.
+  Conect to the USB side of these pins.
 
-Photo <a href="Programming%20Connections.jpg">here</a>.
+  Photo <a href="Programming%20Connections.jpg">here</a>.
 
 
 
@@ -39,7 +39,7 @@ Photo <a href="Programming%20Connections.jpg">here</a>.
 
 8. Install the MSP430 IAR compiler from here...
 
-http://www.iar.com/Products/IAR-Embedded-Workbench/TI-MSP430/
+  http://www.iar.com/Products/IAR-Embedded-Workbench/TI-MSP430/
 
 You can activate the code-limited version - we don't need much code to make the Vibe vibe!
 
