@@ -14,7 +14,7 @@ http://www.ti.com/ww/en/launchpad/launchpads-msp430-msp-exp430g2.html#tabs
 http://processors.wiki.ti.com/index.php/MSP430_LaunchPad_Firmware_Update
 
 3) unplug the USB from the LaunchPad
-4) then remove the prgramming jumpers from the LuanchPad
+4) remove the programming jumpers from the LuanchPad
 5) disconnect the battery from the Vibe
 6) connect to the Vibe programming pins like this...
 
@@ -26,13 +26,20 @@ RXD|_no connection_
 TXD|_no connection_
 VCC|+3V
 
-7) connect one of the GND pins on the launchPad to the GND pin on the Vibe programming heaeder.
+Conect to the USB side of these pins.
+
+Photo <a href="Programming%20Connections.jpg>here</a>.
+
+
+
+7) connect one of the GND pins on the launchPad to the GND pin on the Vibe programming header.
+
 8) Install the MSP430 IAR compiler from here...
 
 http://www.iar.com/Products/IAR-Embedded-Workbench/TI-MSP430/
 
-You can activate the code limited version - we don't need much code to the the Vibe vibe!
+You can activate the code-limited version - we don't need much code to make the Vibe vibe!
 
-9) reconnect the USB to the LaunchPad
+9) reconnect the USB to the LaunchPad. Best to leave the battery unconnected.
 
 10) Open the workspace file in this repository with IAR. 
