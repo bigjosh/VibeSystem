@@ -1,7 +1,7 @@
 ******************************************************************************
                   MSP430 Linker PC v4.3.4                      
 ******************************************************************************
->> Linked Mon Oct 06 11:45:13 2014
+>> Linked Mon Oct 06 12:03:01 2014
 
 OUTPUT FILE NAME:   <AsmText.out>
 ENTRY POINT SYMBOL: "_main"  address: 0000ffd0
@@ -63,7 +63,7 @@ section   page    origin      length       input sections
 .text      0    0000fe00    000001da     
                   0000fe00    000000c4     Ccode.obj (.text:TIMERA0_ISR_HOOK)
                   0000fec4    00000088     Ccode.obj (.text:Port_1)
-                  0000ff4c    0000004e     Ccode.obj (.text:josh)
+                  0000ff4c    0000004e     Ccode.obj (.text:cstart)
                   0000ff9a    0000002c     rts430_eabi.lib : lsl16.obj (.text)
                   0000ffc6    0000000e     main.obj (.text)
                   0000ffd4    00000006     rts430_eabi.lib : isr_trap.obj (.text:__TI_ISR_TRAP)
@@ -161,7 +161,7 @@ ffffffff   __c_args__
 0000ffd0   _main
 ffffffff   binit
 00000204   button_lockout_countdown
-0000ff4c   josh
+0000ff4c   cstart
 00000205   motor_PWM
 00000200   motor_mode
 00000206   motor_state
@@ -218,7 +218,7 @@ address    name
 000010ff   CALBC1_1MHZ
 0000fe00   TIMERA0_ISR_HOOK
 0000fec4   Port_1
-0000ff4c   josh
+0000ff4c   cstart
 0000ff9a   __mspabi_slli
 0000ffa6   __mspabi_slli_15
 0000ffa8   __mspabi_slli_14

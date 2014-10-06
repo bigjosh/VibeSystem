@@ -33,7 +33,6 @@
 volatile unsigned char motor_PWM;		// 0-255
 
 
-
 typedef enum  {
 	MOTOR_STEADY,
 	MOTOR_WAVE_UP,
@@ -52,7 +51,6 @@ volatile unsigned char motor_thump_off_time;		// How long to stay off  durring a
 #define BUTTON_LOCKOUT_TIME	((unsigned char)200)			// Need button to stay low this long before reset, to debounce
 
 unsigned char motor_state;
-
 
 volatile unsigned char button_lockout_countdown;		// countdown while button low
 
@@ -135,11 +133,18 @@ __interrupt void TIMERA0_ISR_HOOK(void)
 //	if (step>=red_led_PWM) {
 //	}
 
+
+	// I know this is all contorted, but nessisary to minimized generated code size...
+
 	unsigned char port = 0;
+
+	// Simulate PWM by turning on bit when step is less than current PWM setting
 
 	if (step<motor_PWM) {
 		port |= MOTOR_BIT;
 	}
+
+	// Make the LED's show bottom two binary digits of motor state
 
 	DEVICES_OUT = port | ((motor_state & 3) << 4) ;
 
@@ -175,6 +180,8 @@ __interrupt void Port_1(void)
 	DEVICES_IFG = 0; // Clear all pending flags
 
 	if (button_lockout_countdown==0) {
+
+		// A switch would have been clearer here, but we just dont have room.
 
 		/*
 		motor_state++;
@@ -252,7 +259,16 @@ __interrupt void Port_1(void)
 }
 
 
-void josh(void)
+/*
+ *
+ * This is the entry point from the ASM start up. It is *not* like main - we do not have any
+ * assumptions when we get here. No variables are in a known state and nothting is set up
+ * except for the start pointer. Do not Return from this procedure becuase there is no
+ * place to return from.
+ *
+ */
+
+void cstart(void)
 {
 	WDTCTL = WDTPW + WDTHOLD;                 // Stop watchdog timer
 
@@ -273,7 +289,7 @@ void josh(void)
 	// Set up Timer
 
 	// The Timer on this part is very limiting so we need to be creative.
-	// We will set the timer to generate an interrupt at 5Khz and we will use that to do manual PWM in the ISR
+	// We will set the timer0 to generate an interrupt at 5Khz and we will use that to do manual PWM in the ISR
 
 	TACTL = TASSEL_2 | MC_1;           // Timer_A Control Register
 
@@ -294,8 +310,6 @@ void josh(void)
 
 	DEVICES_IFG = 0;							// Clear any pending flags
 
-	//red_led_PWM = 0;
-//	white_led_PWM = 0;
 	motor_PWM=0;
 
 	motor_state=0;
@@ -304,10 +318,6 @@ void josh(void)
 
 	// Sleep and enable the interrupts
 	__bis_SR_register( LPM1_bits | GIE);       // w/ interrupt
-
-	//DEVICES_OUT = RED_LED_BIT;
-
-	//while(1);
 
 }
 
