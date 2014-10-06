@@ -34,15 +34,10 @@ To program the Vibe from a Windows machine...
   Photo <a href="Programming%20Connections.jpg">here</a>.
 
 
-
 7. connect one of the GND pins on the launchPad to the GND pin on the Vibe programming header.
 
-8. Install the MSP430 IAR compiler from here...
-
-  http://www.iar.com/Products/IAR-Embedded-Workbench/TI-MSP430/
-
-You can activate the code-limited version - we don't need much code to make the Vibe vibe!
+8. Install the CC6 compiler from TI.
 
 9. reconnect the USB to the LaunchPad. Best to leave the battery unconnected.
 
-10. Open the workspace file in this repository with IAR. 
+10. Open the workspace file in this repository. 
