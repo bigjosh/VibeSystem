@@ -70,6 +70,8 @@ static unsigned motor_speed_index;			// current speed index
 __interrupt void TIMERA0_ISR_HOOK(void)
 {
 
+
+	return;
 	// Note that we check for low batt condition inside the timing loop so we can detect
 	// if the battery level drops aschyonously. This will likely happen while the motor is on
 	// since that will lower the batt voltage, but could also happen the moment the user turns us
@@ -158,7 +160,7 @@ __interrupt void TIMERA0_ISR_HOOK(void)
 			// Turn off everything! We can only wake from this mode via a pin change that would signal
 			// either a button press or the charger being connected
 
-			//__bis_SR_register_on_exit( LPM4_bits | GIE);
+			__bis_SR_register_on_exit( LPM4_bits | GIE);
 
 		}
 	}
@@ -203,6 +205,7 @@ __interrupt void Port_1(void)
 	}
 */
 
+
 	white_led_PWM += 100;
 
 	if (DEVICES_IN & BUTTON_BIT ) {
@@ -224,8 +227,9 @@ __interrupt void Port_1(void)
 		}
 	}
 
-	//__bic_SR_register_on_exit( OSCOFF );		// Clear OSC off bit, which turns OSC on so that timer loop will run
+	//__bic_SR_register_on_exit( OSCOFF );		// Clear OSC off bit, which turns OSC on so that timer ISR will run
 
+	DEVICES_OUT ^= RED_LED_BIT;
 }
 
 
@@ -295,7 +299,7 @@ void cstart(void)
 	DEVICES_OUT = 0;		// Start with everything off
 
 	// Sleep and enable the interrupts
-	__bis_SR_register( /*LPM4_bits | */ GIE);       // deep sleep w/ interrupt enabled
+	__bis_SR_register( LPM4_bits | GIE);       // deep sleep w/ interrupt enabled
 
 	while(1);
 
