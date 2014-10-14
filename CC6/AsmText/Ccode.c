@@ -260,6 +260,8 @@ void cstart(void)
 //	DEVICES_OUT = 0;
 	DEVICES_DIR = WHITE_LED_BIT | RED_LED_BIT | MOTOR_BIT;
 
+	P2OUT = BIT6 | BIT7;		// Pins P2.6 and P2.7 not connected so set to output to save power.
+
 	// Set up Timer
 
 	// The Timer on this part is very limiting so we need to be creative.
