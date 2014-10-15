@@ -3,6 +3,8 @@ VibeSystem
 
 Firmware for Dame Products Vibe V2
 
+Note that this firmware assumes fully populated VIBE V1 board. In this configuration, the lowest current draw at full idle is ~50ua. At this rate, a fully charged battery will go dead in about [4 months](https://www.google.com/search?q=(160mAh)%2F(50+microamps)+in+months) , so always store fully charged to avoid battery damge. 
+
 User Interface
 --------------
 Pushing button cycles through 3 speed settings and then back to off.
