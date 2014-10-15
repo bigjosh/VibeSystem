@@ -10,8 +10,7 @@ ASM_SRCS += \
 ../main.asm 
 
 C_SRCS += \
-../Ccode.c \
-../main.c 
+../Ccode.c 
 
 OBJS += \
 ./Ccode.obj \
@@ -21,12 +20,10 @@ ASM_DEPS += \
 ./main.pp 
 
 C_DEPS += \
-./Ccode.pp \
-./main.pp 
+./Ccode.pp 
 
 C_DEPS__QUOTED += \
-"Ccode.pp" \
-"main.pp" 
+"Ccode.pp" 
 
 OBJS__QUOTED += \
 "Ccode.obj" \
@@ -36,8 +33,7 @@ ASM_DEPS__QUOTED += \
 "main.pp" 
 
 C_SRCS__QUOTED += \
-"../Ccode.c" \
-"../main.c" 
+"../Ccode.c" 
 
 ASM_SRCS__QUOTED += \
 "../main.asm" 

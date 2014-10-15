@@ -10,4 +10,5 @@
 	<rts value="libc.a"/>
 	<createSlaveProjects value=""/>
 	<templateProperties value="id=com.ti.ccstudio.project.templates.emptyAssemblyOnly_msp430,isAssemblyOnly=true,"/>
+	<isTargetManual value="false"/>
 </projectOptions>

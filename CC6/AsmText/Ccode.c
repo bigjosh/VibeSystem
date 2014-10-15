@@ -19,7 +19,7 @@
 #define PG_BIT			BIT2		// LOW indicates Power Good (charer is seeing power)
 #define EOG_BIT			BIT7		// End of charge (battery full)
 
-#define LOWBATT_BIT		BIT3		// Low battery signal
+#define LOWBATT_BIT		BIT3		// Low battery signal, goes to 0 when batt volatge drops below 3*1.2 = 3.6 volts
 #define BUTTON_BIT		BIT6		// HIGH on button press
 
 /*
@@ -30,16 +30,11 @@
 #define UPDATE_COUNT 		(SMCLK_HZ/(UPDATE_FREQ_HZ*PWM_STEPS))	// Value for Timer counter to generate above update freq
 */
 
-volatile unsigned char white_led_PWM;	// 0-255
-volatile unsigned char motor_PWM;		// 0-255
-
-
 
 // The button_lockout_countdown debounces button presses. If it is anything other than zero, then
 // a new button press is ignored, and the countdown is reset to BUTTON_LOCKOUT_TIME.
-// As long as the button is released, the countdown will count down towards zero
+// While the button is released, the countdown will count down towards zero
 // ensuring that the button was up for a minimum amount of time before being pressed again.
-
 
 #define BUTTON_LOCKOUT_TIME	500					// Need button to stay low this long before reset, to debounce
 
@@ -50,16 +45,17 @@ volatile unsigned button_lockout_countdown;		// countdown while button low (pres
 
 #define LONG_BUTTON_PRESS 20000
 
-volatile unsigned button_longpress_countdown;	// countup while button low (pressed)
+volatile unsigned button_longpress_countdown;	// count down while button low (pressed)
 
-volatile unsigned red_led_countdown;			// countdown to turn off red led
+//volatile unsigned red_led_countdown;			// countdown to turn off red led
 
-static const int speeds[] = { 0 , 16 , 48 + 16  , 204 } ; 	// Fixed speed settings
-															// Currently wraps at with 2 bits, so
-															// SO must be 4 choices
+#define MOTOR_SPEED_COUNT 4
+static const int motor_speeds[MOTOR_SPEED_COUNT] = { 0 , 16 , 48 + 16  , 204 } ; 	// Fixed speed settings
 
-static unsigned motor_speed_index;			// current speed index
 
+volatile unsigned motor_speed_index;			// current speed index
+
+volatile unsigned powerup_flag;				// Are we just waking from a powerup?
 
 /*
  *  ======== Timer_A2 Interrupt Service Routine ========
@@ -70,64 +66,116 @@ static unsigned motor_speed_index;			// current speed index
 __interrupt void TIMERA0_ISR_HOOK(void)
 {
 
+	static unsigned char pulse;		// Slowly pulses
 
-	return;
-	// Note that we check for low batt condition inside the timing loop so we can detect
-	// if the battery level drops aschyonously. This will likely happen while the motor is on
-	// since that will lower the batt voltage, but could also happen the moment the user turns us
-	// on and we are on the first pass through this timing loop, in which case we will turn off
-	// without ever turning on the motor
-
+	DEVICES_OUT = 0;			// Turn everything off for a moment
+								// DO this first to let the battery voltage rise a bit without load before we check it.
 
 	static unsigned char step;			// Cycle this though to keep track of pwm values
 
 	step++;
 
 	if (!step) {	// Did we overflow?
-//		white_led_PWM+=5;
+
+		// Generate the variable that we use elsewhere for pulsing...
+
+		static int pulse_dir;
+
+		if (pulse<=5) {
+			pulse_dir = 1;
+		} else if (pulse>=70) {
+			pulse_dir = -1;
+		}
+
+		pulse += pulse_dir;
+
 	}
 
-	// I know this is all contorted, but nessisary to minimized generated code size...
+	unsigned powerdown_flag=0;			// shoud we turn off?
 
-	unsigned char port = 0;
+	// Compute the PWM channels based on current state
+	// All channels start at zero default then we change them as nessisary
 
-	// Simulate PWM by turning on bit when step is less than current PWM setting
+	unsigned char white_led_PWM=0;	// 0-255
 
-	if (step<motor_PWM) {
-		port |= MOTOR_BIT;
+	unsigned char motor_PWM=0;		// 0-255
+
+	unsigned char red_led_PWM=0;	// 0-255
+
+
+	if ( !(DEVICES_IN & PG_BIT) ) {					// Charger connected
+
+		motor_speed_index = 0;						// Turn off motor when charger connected  TODO: is this correct UI?
+
+		if ( !(DEVICES_IN & EOG_BIT) ) {			// Charger battery full?
+
+			white_led_PWM = 255;
+
+		} else if ( !( DEVICES_IN & CHARGE_BIT)) {	// Charge in progress
+
+			white_led_PWM = pulse;
+
+		} else {
+
+			white_led_PWM = 100;
+			red_led_PWM = pulse;
+		}
+
+		// Note that we will never power down if charger connected, so LEDs can show charging status
+
+	} else {										// No charger connected
+
+		// We check for low batt condition inside the timing loop so we can detect
+		// if the battery level drops aschyonously. This will likely happen while the motor is on
+		// since that will lower the batt voltage, but could also happen the moment the user turns us
+		// on and we are on the first pass through this timing loop, in which case we will turn off
+		// without ever turning on the motor
+
+		// TODO: Use SVSCTL to detect low battery and eliminate the low battery circuit and get software control over setpoint
+
+		if ( !(DEVICES_IN & LOWBATT_BIT)) {			// Low Battery detected?
+
+			red_led_PWM=200;						// Show red LED to user (they will only see if button pressed becuase otherwsie we will power down immedeately)
+
+			motor_speed_index = 0;					// Turn off motor (which will lead to powerdown)
+
+		}
+
+		if (motor_speed_index==0) {					// Motor currently off?
+
+			powerdown_flag = 1;						// Powerdown when button is released
+
+		}
+
+		motor_PWM = motor_speeds[ motor_speed_index ];
+
 	}
 
-	if (step<white_led_PWM) {
-		port |= WHITE_LED_BIT;
-	}
 
-	// Make the LED's show bottom two binary digits of motor state
-
-	DEVICES_OUT = port;
-
-	if (DEVICES_IN & BUTTON_BIT ) {			// button currently pressed?
+	if (DEVICES_IN & BUTTON_BIT) {			// button currently pressed?
 
 		if (button_lockout_countdown) {		// Are we currently in a debounce cycle?
 
-			button_lockout_countdown = BUTTON_LOCKOUT_TIME;		// Reset lockout countdown counter; (we need to see it unpress for a min time)
+			button_lockout_countdown = BUTTON_LOCKOUT_TIME;		// Reset lockout countdown counter since button is pressed right now; (we need to see it unpress for a min time)
 
-			// Check how long we have been down for
+			if (button_longpress_countdown) {					// Currently in a longpress countdown?
 
-			button_longpress_countdown--;
+				// Check how long we have been down for
 
-			// IF we have been down long enough...
-			if (!button_longpress_countdown) {
+				button_longpress_countdown--;
 
-				//we got a long press
+				// If we have been down long enough...
 
-				// Turn off motor
+				if (!button_longpress_countdown) {
 
-				motor_PWM = 0;
-				motor_speed_index=0;
+					// Turn off motor immedeately for user feedback
 
-				// Which will trigger a power down once the lockot expires.
+					motor_speed_index = 0;					// Goto off mode just in case battery level rises again while button down, we will need to button cycle to turn on again
 
-				button_longpress_countdown = LONG_BUTTON_PRESS;		// Reset the counter so we will loop around and potentially keep turning off, but that is ok.
+					// then power down when button released
+
+					powerdown_flag = 1;
+				}
 			}
 
 		}
@@ -140,30 +188,49 @@ __interrupt void TIMERA0_ISR_HOOK(void)
 
 		}
 
+		button_longpress_countdown = LONG_BUTTON_PRESS;		// Start waiting for long press from scatch (we need to see continuously press)
+
 	}
+
 
 	// We should only power down if we are not currently debouncing a press otherwise we
 	// might immedeately wake up again from bounces
 
-	if (!button_lockout_countdown) {	// Make sure we are not in a lockout and...
+	if (!button_lockout_countdown && powerdown_flag) {	// Make sure we are not in a debound lockout - button has been safely released
 
-		// ...check if the motor got turned off since last
+		// Remeber that all outputs are low right now because we turned them off at the
+		// top of the routine.
 
-		// Motor could have been turned off by...
-		// button cycle to off mode
-		// long button press
-		// low battery
+		// We can only wake from this mode via a pin change that would signal
+		// either a button press or the charger being connected
 
-		if ( !motor_PWM && !white_led_PWM) {		// Motor is off and white LED off (so not charging), so we should goto deep sleep
+		powerup_flag   = 1;			// A global to tell the int route to init variables on powerup.
 
+		__bis_SR_register_on_exit( LPM4_bits | GIE);
 
-			// Turn off everything! We can only wake from this mode via a pin change that would signal
-			// either a button press or the charger being connected
+		return;
 
-			__bis_SR_register_on_exit( LPM4_bits | GIE);
-
-		}
 	}
+
+	// Remeber that when we get here, all devices are still off becuase we turnted them off at the
+	// top of this routine
+
+	// Simulate PWM by turning on bit when step is less than current PWM setting
+
+	if (step<motor_PWM) {
+		DEVICES_OUT|= MOTOR_BIT;
+	}
+
+	if (step<white_led_PWM) {
+		DEVICES_OUT|= WHITE_LED_BIT;
+	}
+
+	if (step<red_led_PWM) {
+
+		DEVICES_OUT|= RED_LED_BIT;
+
+	}
+
 
 }
 
@@ -185,36 +252,35 @@ __interrupt void TIMERA0_ISR_HOOK(void)
 __interrupt void Port_1(void)
 {
 
+	// Docs are unclear on how to atomically read and reset flags.
+	// I think this is the safest possible way.
+
 	DEVICES_IFG = 0; // Clear all pending flags
 
-	// TODO: Use SVSCTL to detect low battery and eliminate the low battery circuit
-/*
-	if (DEVICES_IN & LOWBATT_BIT) {		// Low Battery?
+	if (powerup_flag) {		// Are we waking from a powerdown?
 
-		// Blink the red light to indicate low batt (also turns off everything else)
+		motor_speed_index=0;	// Start mode cycle over
 
-		DEVICES_OUT = RED_LED_BIT;
-		unsigned i = 60000;					// SW Delay
-		do i--;
-		while(i != 0);
-		DEVICES_OUT = 0;
+		// TODO: Need next two lines? Or does it happen naturally?
 
-		// Then goto deep sleep. Stops timer loop so only a button press can wake us.
-		// TODO:__bis_SR_register_on_exit( LPM4_bits | GIE);
-		return;
+		button_lockout_countdown = 0;
+		button_longpress_countdown= LONG_BUTTON_PRESS;			// Start waiting to see if this ia longpress
+
+		powerup_flag = 0;		// Clear powerdown condition until next time
+
 	}
-*/
 
-
-	white_led_PWM += 100;
-
-	if (DEVICES_IN & BUTTON_BIT ) {
+	if ( DEVICES_IN & BUTTON_BIT ) {
 
 		if (button_lockout_countdown==0) {
 
-			motor_speed_index = (motor_speed_index+1) & 0x03;	// Cycle though 4 settings
+			motor_speed_index++;
 
-			motor_PWM = speeds[motor_speed_index];
+			if (motor_speed_index == MOTOR_SPEED_COUNT) {	// Did we cycle to the end?
+
+				motor_speed_index=0;		// Switch to off mode. This will also power us down in the timer routine when button is released
+
+			}
 
 			button_lockout_countdown = BUTTON_LOCKOUT_TIME;		// Start the countdowntimer for debounce
 
@@ -227,9 +293,10 @@ __interrupt void Port_1(void)
 		}
 	}
 
-	//__bic_SR_register_on_exit( OSCOFF );		// Clear OSC off bit, which turns OSC on so that timer ISR will run
+	__bic_SR_register_on_exit( LPM4_bits );		// Clear LMP4 bits so we are ruuning normal mode, which turns OSC on so that timer ISR will run
+												// TODO: Find lowest power mode that lets timer run, although tis doesn't matter much since
+												//       it only effect power usage while we are on and inbetween timer calls
 
-	DEVICES_OUT ^= RED_LED_BIT;
 }
 
 
@@ -260,7 +327,9 @@ void cstart(void)
 //	DEVICES_OUT = 0;
 	DEVICES_DIR = WHITE_LED_BIT | RED_LED_BIT | MOTOR_BIT;
 
-	P2OUT = BIT6 | BIT7;		// Pins P2.6 and P2.7 not connected so set to output to save power.
+
+	P2OUT = 0x00;		// Port 2 pins unused, so so set to output low to save power.
+	P2DIR = 0xFF;
 
 	// Set up Timer
 
@@ -282,27 +351,21 @@ void cstart(void)
 
 	DEVICES_IFG = 0;							// Clear any pending flags
 
-	DEVICES_IES = 0;							// Low to high transition interrupt on all pins
+	DEVICES_IES = PG_BIT;						// Low to high transition interrupt on button, high to low on charger connection (it is active low)
 
-	DEVICES_IE = BUTTON_BIT;					// Enable interrupts on the button pin
+	DEVICES_IE = BUTTON_BIT | PG_BIT;			// Enable interrupts on the button pin or charger connection
 
-	//DEVICES_IFG = BUTTON_BIT;							// Software trigger a first pass just to get things going and cover any ints we may have missed
 
-	white_led_PWM=0;
-
-	motor_PWM=0;
-
-	motor_speed_index=0;
-
-	button_lockout_countdown = 0;
-
-	button_longpress_countdown= LONG_BUTTON_PRESS;			// Start waiting to see if this ia longpress
+	DEVICES_IFG = BUTTON_BIT;					// Software trigger a first pass just to get things going and cover any ints we may have missed
+												// For example - we just powered up becuase charger was attached
 
 	DEVICES_OUT = 0;		// Start with everything off
+
+	powerup_flag = 1; 	// Start up fresh on next interrupt
 
 	// Sleep and enable the interrupts
 	__bis_SR_register( LPM4_bits | GIE);       // deep sleep w/ interrupt enabled
 
-	while(1);
+	while(1);								   // We should never get here....
 
 }

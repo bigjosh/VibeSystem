@@ -141,7 +141,7 @@ AsmText.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(EXE_OUTPUTS__QUOTED)$(BIN_OUTPUTS__QUOTED)
-	-$(RM) "Ccode.pp" "main.pp" 
+	-$(RM) "Ccode.pp" 
 	-$(RM) "Ccode.obj" "main.obj" 
 	-$(RM) "main.pp" 
 	-@echo 'Finished clean'
