@@ -36,7 +36,9 @@ To program the Vibe from a Windows machine...
 
 7. connect one of the GND pins on the launchPad to the GND pin on the Vibe programming header.
 
-8. Install the CC6 compiler from TI.
+8. Install the CC6 compiler from TI...
+
+  http://www.ti.com/tool/CCSTUDIO
 
 9. reconnect the USB to the LaunchPad. Best to leave the battery unconnected.
 
