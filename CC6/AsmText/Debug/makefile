@@ -122,7 +122,7 @@ BIN_OUTPUTS__QUOTED += \
 
 
 # All Target
-all: AsmText.out
+all: AsmText.out secondary-outputs
 
 # Tool invocations
 AsmText.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
@@ -146,6 +146,8 @@ clean:
 	-$(RM) "main.pp" 
 	-@echo 'Finished clean'
 	-@echo ' '
+
+secondary-outputs: $(BIN_OUTPUTS)
 
 .PHONY: all clean dependents
 .SECONDARY:

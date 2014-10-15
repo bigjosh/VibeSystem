@@ -57,6 +57,9 @@ volatile unsigned motor_speed_index;			// current speed index
 
 volatile unsigned powerup_flag;				// Are we just waking from a powerup?
 
+volatile unsigned low_batt_detected_flag;	// If we saw low voltage for a moment, power down even if it comes back up and require a button press to Wake again
+
+
 /*
  *  ======== Timer_A2 Interrupt Service Routine ========
  *  Called at UPDATE_FREQ_HZ based on Timer_A2 running in UP mode
@@ -135,6 +138,12 @@ __interrupt void TIMERA0_ISR_HOOK(void)
 
 		if ( !(DEVICES_IN & LOWBATT_BIT)) {			// Low Battery detected?
 
+			low_batt_detected_flag = 1;
+
+		}
+
+		if (low_batt_detected_flag) {
+
 			red_led_PWM=200;						// Show red LED to user (they will only see if button pressed becuase otherwsie we will power down immedeately)
 
 			motor_speed_index = 0;					// Turn off motor (which will lead to powerdown)
@@ -152,9 +161,9 @@ __interrupt void TIMERA0_ISR_HOOK(void)
 	}
 
 
-	if (DEVICES_IN & BUTTON_BIT) {			// button currently pressed?
+	if (button_lockout_countdown) {		// Are we currently in a debounce cycle?
 
-		if (button_lockout_countdown) {		// Are we currently in a debounce cycle?
+		if (DEVICES_IN & BUTTON_BIT) {			// button currently pressed?
 
 			button_lockout_countdown = BUTTON_LOCKOUT_TIME;		// Reset lockout countdown counter since button is pressed right now; (we need to see it unpress for a min time)
 
@@ -178,17 +187,15 @@ __interrupt void TIMERA0_ISR_HOOK(void)
 				}
 			}
 
-		}
+		} else { // button currently up
 
-	} else { // button currently up
-
-		if (button_lockout_countdown) {			// Are we in a debounce?
+			// We know button_lockout_countdown>0 if we get here from enclosing if
 
 			button_lockout_countdown--;			// count down...
 
-		}
+			button_longpress_countdown = LONG_BUTTON_PRESS;		// Start waiting for long press from scatch (we need to see continuously press)
 
-		button_longpress_countdown = LONG_BUTTON_PRESS;		// Start waiting for long press from scatch (we need to see continuously press)
+		}
 
 	}
 
@@ -207,6 +214,8 @@ __interrupt void TIMERA0_ISR_HOOK(void)
 		powerup_flag   = 1;			// A global to tell the int route to init variables on powerup.
 
 		__bis_SR_register_on_exit( LPM4_bits | GIE);
+
+		// Good night!
 
 		return;
 
@@ -264,7 +273,8 @@ __interrupt void Port_1(void)
 		// TODO: Need next two lines? Or does it happen naturally?
 
 		button_lockout_countdown = 0;
-		button_longpress_countdown= LONG_BUTTON_PRESS;			// Start waiting to see if this ia longpress
+
+		low_batt_detected_flag = 0;
 
 		powerup_flag = 0;		// Clear powerdown condition until next time
 
@@ -278,7 +288,7 @@ __interrupt void Port_1(void)
 
 			if (motor_speed_index == MOTOR_SPEED_COUNT) {	// Did we cycle to the end?
 
-				motor_speed_index=0;		// Switch to off mode. This will also power us down in the timer routine when button is released
+				motor_speed_index=0;		// Switch to off mode. This will also power us down in the timer routine when button lockout completes
 
 			}
 
@@ -286,9 +296,6 @@ __interrupt void Port_1(void)
 
 			button_longpress_countdown = LONG_BUTTON_PRESS;		// Start the counter for a long press
 
-			// If we cycled though to off mode (pwm=0), then we must wait for the lockout ot expire
-			// before shutting down or else we might bounce and immedately wake up again.
-			// The actuall shutdown code is in the timer routine.
 
 		}
 	}
