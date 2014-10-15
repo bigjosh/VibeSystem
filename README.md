@@ -1,7 +1,23 @@
 VibeSystem
 ==========
 
-Firmware for Dame Products Vibe V1
+Firmware for Dame Products Vibe V2
+
+User Interface
+--------------
+Pushing button cycles through 3 speed settings and then back to off.
+
+Holding the button down for about 1/2 second also turns off. 
+
+Automatically turns off on low battery condition. Pressing button when battery is low will not turn on motor but instead will light the red LED. 
+
+Motor will not turn on while chargering. 
+
+Pulsing white LED indicates charging. Solid on white LED indicates full charge. Solid white LED with pulsing red LED indicates charging fault including low charger voltage, defective battery, or over tempurature. 
+
+
+Burning
+-------
 
 To program the Vibe from a Windows machine...
 
