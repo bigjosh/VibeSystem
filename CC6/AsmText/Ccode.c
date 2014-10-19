@@ -36,7 +36,7 @@
 // While the button is released, the countdown will count down towards zero
 // ensuring that the button was up for a minimum amount of time before being pressed again.
 
-#define BUTTON_LOCKOUT_TIME	500					// Need button to stay low this long before reset, to debounce
+#define BUTTON_LOCKOUT_TIME	500					// Need button to stay released this long before another press registered, to debounce
 
 volatile unsigned button_lockout_countdown;		// countdown while button low (pressed)
 
@@ -47,18 +47,16 @@ volatile unsigned button_lockout_countdown;		// countdown while button low (pres
 
 volatile unsigned button_longpress_countdown;	// count down while button low (pressed)
 
-//volatile unsigned red_led_countdown;			// countdown to turn off red led
-
 #define MOTOR_SPEED_COUNT 4
 static const int motor_speeds[MOTOR_SPEED_COUNT] = { 0 , 16 , 48 + 16  , 204 } ; 	// Fixed speed settings
-
 
 volatile unsigned motor_speed_index;			// current speed index
 
 volatile unsigned powerup_flag;				// Are we just waking from a powerup?
 
-volatile unsigned low_batt_detected_flag;	// If we saw low voltage for a moment, power down even if it comes back up and require a button press to Wake again
+volatile unsigned low_batt_detected_flag;	// If we saw low voltage for a moment, latch it in case it comes back up.
 
+volatile unsigned white_led_countdown;		// For blinking the white LED on a button press that sets speed
 
 /*
  *  ======== Timer_A2 Interrupt Service Routine ========
@@ -91,6 +89,11 @@ __interrupt void TIMERA0_ISR_HOOK(void)
 		}
 
 		pulse += pulse_dir;
+
+
+		if (white_led_countdown) {			// Keep dimming the white LED until off if we are in a countdown
+			white_led_countdown--;
+		}
 
 	}
 
@@ -158,6 +161,8 @@ __interrupt void TIMERA0_ISR_HOOK(void)
 
 		motor_PWM = motor_speeds[ motor_speed_index ];
 
+		white_led_PWM = white_led_countdown;		// Blink the white LED if there was a recent button press
+
 	}
 
 
@@ -203,7 +208,7 @@ __interrupt void TIMERA0_ISR_HOOK(void)
 	// We should only power down if we are not currently debouncing a press otherwise we
 	// might immedeately wake up again from bounces
 
-	if (!button_lockout_countdown && powerdown_flag) {	// Make sure we are not in a debound lockout - button has been safely released
+	if (!button_lockout_countdown && powerdown_flag) {	// Make sure we are not in a debounce lockout - button has been safely released
 
 		// Remeber that all outputs are low right now because we turned them off at the
 		// top of the routine.
@@ -278,6 +283,8 @@ __interrupt void Port_1(void)
 
 		powerup_flag = 0;		// Clear powerdown condition until next time
 
+		white_led_countdown=0;
+
 	}
 
 	if ( DEVICES_IN & BUTTON_BIT ) {
@@ -295,6 +302,8 @@ __interrupt void Port_1(void)
 			button_lockout_countdown = BUTTON_LOCKOUT_TIME;		// Start the countdowntimer for debounce
 
 			button_longpress_countdown = LONG_BUTTON_PRESS;		// Start the counter for a long press
+
+			white_led_countdown = 100;							// Blink the white LED to give user feedback on a button press
 
 
 		}
@@ -329,9 +338,9 @@ void cstart(void)
 
 	// Setup Pins
 
-	// Set all device pins to output mode
+	// Set all device pins to output mode, low
 
-//	DEVICES_OUT = 0;
+	DEVICES_OUT = 0;
 	DEVICES_DIR = WHITE_LED_BIT | RED_LED_BIT | MOTOR_BIT;
 
 
@@ -360,15 +369,13 @@ void cstart(void)
 
 	DEVICES_IES = PG_BIT;						// Low to high transition interrupt on button, high to low on charger connection (it is active low)
 
-	DEVICES_IE = BUTTON_BIT | PG_BIT;			// Enable interrupts on the button pin or charger connection
+	DEVICES_IE = BUTTON_BIT | PG_BIT;			// Enable interrupts on  button down or charger "power good" connection
 
 
 	DEVICES_IFG = BUTTON_BIT;					// Software trigger a first pass just to get things going and cover any ints we may have missed
 												// For example - we just powered up becuase charger was attached
 
-	DEVICES_OUT = 0;		// Start with everything off
-
-	powerup_flag = 1; 	// Start up fresh on next interrupt
+	powerup_flag = 1; 		// Start up fresh on next interrupt
 
 	// Sleep and enable the interrupts
 	__bis_SR_register( LPM4_bits | GIE);       // deep sleep w/ interrupt enabled
